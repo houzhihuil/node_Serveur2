@@ -31,12 +31,19 @@ app.use((req, res, next) => {
     }
 }); 
      
-const con= mysql.createConnection({ 
+/* const con= mysql.createConnection({ 
     host:"localhost",
     user: "root",
     password: "Zh9$*@92If84", 
     database:"sakila"
-  });
+  }); */
+
+const con= mysql.createConnection({
+    host:"mysql-philippehou.alwaysdata.net",
+    user:"289337_root",
+    password:"Tm3x-dCQ7k3mLMf",
+    database:"philippehou_sakila"
+});  
  
 con.connect(function(err){
     if(err) throw err; 
