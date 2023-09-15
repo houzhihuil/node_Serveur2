@@ -1,5 +1,5 @@
 const express = require("express");  
-const mysql = require('mysql2');
+const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require('body-parser');
 
@@ -29,188 +29,105 @@ app.use((req, res, next) => {
         // API token is invalid, return an error response
         res.status(401).json({ error: 'Invalid API token' });
     }
-}); 
-     
-/* const con= mysql.createConnection({ 
-    host:"localhost",
-    user: "root",
-    password: "Zh9$*@92If84", 
-    database:"sakila"
-  }); */
+});   
 
-const con= mysql.createConnection({
-    host:"mysql-philippehou.alwaysdata.net",
-    user:"289337_root",
-    password:"Tm3x-dCQ7k3mLMf",
-    database:"philippehou_sakila"
-});  
- 
-con.connect(function(err){
-    if(err) throw err; 
-});  
- 
-// database: sakila
-// tbl : actor 
-app.get("/getAllActors", function(request, response){
-    con.query("SELECT * FROM actor", function(err, result, fields){
-        if(err) throw err; 
-        response.status(200).json(result);
-    }); 
+// Connect to your MongoDB database
+mongoose.connect('mongodb+srv://root:JoB0QY9yqosg2EIa@cluster0.na3ur4v.mongodb.net/cluster0')
+mongoose.connection.once('open', () => {
+    console.log('conneted to database');
 }); 
 
-    app.get("/getActor/:actor_id", function(req, res) { 
-        const id = req.params.actor_id;
-    
-        const query = "SELECT * FROM actor WHERE actor_id = ?;";
-        const values = [id];
-    
-        con.query(query, values, function(err, result, fields) {
-            if(err) throw err; 
-            if (result.length > 0) {
-                console.log(JSON.stringify(result[0]));
-                res.status(200).json({
-                    message: "Actor trouvé",
-                    data: result[0]
-                });
-            } else {
-                console.log("Actor non trouvé");
-                res.status(404).json({
-                    message: "Aucun acteur trouvé",
-                    data: {}
-                });
-            }
-        });
-    });
-
-app.post('/addActor', (req, res) => {
-    const actor = {
-        first_name: req.body.first_name,
-        last_name: req.body.last_name
-    };
-
-    const query = "INSERT INTO actor (first_name, last_name) VALUES (?, ?);";
-    const values = [actor.first_name, actor.last_name];
-
-    con.query(query, values, (err, result, fields) => {
-        if (err) throw err;
-        res.status(200).json({ message: "Actor ajouté" });
-    });
+const actorSchema = new mongoose.Schema({
+    first_name: String,
+    last_name: String,
 });
+
+const Actor = mongoose.model("Actor", actorSchema);
  
-app.put("/updateActor/:actor_id", function(req, res) { 
-    const id= req.params.actor_id; 
-    const actor = {
-        first_name: req.body.first_name,
-        last_name: req.body.last_name
-    };
-  
-    const query = "UPDATE Actor SET first_name = ?, last_name = ? WHERE actor_id = ?;";
-    const values = [actor.first_name, actor.last_name, id];
-    con.query(query, values, (err, result, fields) => {
-        if (err) throw err;
-        res.status(200).json({ message: "modifié" });
-    }); 
-});
-
-app.delete("/deleteActor/:actor_id", function(req, res){
-    const id = req.params.actor_id;  
-    query = "DELETE FROM Actor where actor_id = ?";
-    const values = [id];
-    con.query(query, values, (err, result, fields) => { 
-        if(err) throw err; 
-        res.status(200).json({ message: "Actor supprimé" }); 
-    });  
-});
-// tbl: address
-
-app.get("/getAllAddress", function(request, response){
-    con.query("SELECT * FROM address", function(err, result, fields){
-        if(err) throw err; 
-        response.status(200).json(result);
-    }); 
+// Get all actors
+app.get("/getAllActors", async(req, res)=>{
+    try {
+        const actors = await Actor.find();
+        res.status(200).json(actors);
+    } catch (err) {
+        res.status(500).json({ error: "Error fetching actors" });
+    }
 }); 
 
-app.get("/getAddress/:address_id", function(req, res) { 
-    const id = req.params.address_id;
-
-    const query = "SELECT * FROM address WHERE address_id = ?;";
-    const values = [id];
-
-    con.query(query, values, function(err, result, fields) {
-        if(err) throw err; 
-        if (result.length > 0) {
-            console.log(JSON.stringify(result[0]));
+// Get a single actor by ID
+app.get("/getActor/:actor_id", async (req, res) => {
+    const id = req.params.actor_id;
+    try {
+        const actor = await Actor.findById(id);
+        if (actor) {
             res.status(200).json({
-                message: "Address trouvé",
-                data: result[0]
+                message: "Actor trouvé",
+                data: actor,
             });
         } else {
-            console.log("Address non trouvé");
             res.status(404).json({
                 message: "Aucun acteur trouvé",
-                data: {}
+                data: {},
             });
         }
-    });
+    } catch (err) {
+        res.status(500).json({ error: "Error fetching actor" });
+    }
 });
 
-app.post('/addAddress', (req, res) => {
-    const address = {
-        address: req.body.address,
-        address2: req.body.address2,
-        district: req.body.district,
-        city_id: req.body.city_id,
-        postal_code: req.body.postal_code,
-        phone: req.body.phone
-       /*  x: req.body.x, // Provide x coordinate
-        y: req.body.y  // Provide y coordinate */
+// Add a new actor
+app.post("/addActor", async (req, res) => {
+    const actorData = {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
     };
 
-    
-     
-    const query = "INSERT INTO address (address, address2, district, city_id, postal_code, phone, location) VALUES (?, ?, ?, ?, ?, ? ,?);";
-    const values = [address.address, address.address2, address.district, address.city_id, address.postal_code, address.phone, null ];
+    try {
+        const newActor = await Actor.create(actorData);
+        res.status(200).json({ message: "Actor ajouté", data: newActor });
+    } catch (err) {
+        res.status(500).json({ error: "Error adding actor" });
+    }
+});
 
-    con.query(query, values, (err, result, fields) => {
-        if (err) {
-            console.error("Error adding address:", err);
-            return res.status(500).json({ message: "An error occurred while adding the address." });
+// Update an actor by ID
+app.put("/updateActor/:actor_id", async (req, res) => {
+    const id = req.params.actor_id;
+    const actorData = {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+    };
+
+    try {
+        const updatedActor = await Actor.findByIdAndUpdate(id, actorData, { new: true });
+        if (updatedActor) {
+            res.status(200).json({ message: "Actor modifié", data: updatedActor });
+        } else {
+            res.status(404).json({ message: "Aucun acteur trouvé" });
         }
-        res.status(200).json({ message: "Address ajouté" });
-    });
+    } catch (err) {
+        res.status(500).json({ error: "Error updating actor" });
+    }
 });
 
-app.put("/updateAddress/:address_id", function(req, res) { 
-    const id= req.params.address_id; 
-    const address = {
-        address: req.body.address,
-        address2: req.body.address2,
-        district: req.body.district,
-        city_id: req.body.city_id,
-        postal_code: req.body.postal_code,
-        phone: req.body.phone
-    };
-     
-    const query = "UPDATE Address SET address = ?, address2 = ?, district = ?, city_id = ?, postal_code = ?, phone = ?  WHERE address_id = ?;";
-     
-    const values = [address.address, address.address2, address.district, address.city_id, address.postal_code, address.phone];
+// Delete an actor by ID
+app.delete("/deleteActor/:actor_id", async (req, res) => {
+    const id = req.params.actor_id;
 
-    con.query(query, values, (err, result, fields) => {
-        if (err) throw err;
-        res.status(200).json({ message: "modifié" });
-    }); 
-});
+    try {
+        const deletedActor = await Actor.findByIdAndDelete(id);
+        if (deletedActor) {
+            res.status(200).json({ message: "Actor supprimé" });
+        } else {
+            res.status(404).json({ message: "Aucun acteur trouvé" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Error deleting actor" });
+    }
+}); 
+
  
-app.delete("/deleteAddress/:address_id", function(req, res){
-    const id = req.params.address_id;  
-    query = "DELETE FROM Address where address_id = ?";
-    const values = [id];
-    con.query(query, values, (err, result, fields) => { 
-        if(err) throw err; 
-        res.status(200).json({ message: "Address supprimé" }); 
-    });  
-});
-
+ 
 
 
  
